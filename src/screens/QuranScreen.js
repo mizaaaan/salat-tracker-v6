@@ -87,7 +87,7 @@ const SurahRow = React.memo(({ item, onPress, Colors }) => {
 });
 
 // ── Ayah Item ──────────────────────────────────────────────────────────────────
-const AyahItem = React.memo(({ ayah, showEn, showBn, arabicFont, Colors }) => {
+const AyahItem = React.memo(({ ayah, showEn, showBn, arabicFont, arabicSize, Colors }) => {
   const styles = ayahStyles(Colors);
   const fontFamily = arabicFont === 'pdms' ? 'PDMSSaleem' : undefined;
   return (
@@ -101,7 +101,14 @@ const AyahItem = React.memo(({ ayah, showEn, showBn, arabicFont, Colors }) => {
       </View>
 
       {/* Arabic */}
-      <Text style={[styles.arabicText, fontFamily && { fontFamily }]} selectable>
+      <Text
+        style={[
+          styles.arabicText,
+          { fontSize: arabicSize, lineHeight: arabicSize * 1.8 },
+          fontFamily && { fontFamily },
+        ]}
+        selectable
+      >
         {ayah.arabic}
       </Text>
 
@@ -141,6 +148,16 @@ export default function QuranScreen() {
   const [arabicFont, setArabicFont] = useState('system');
   const toggleFont = useCallback(() =>
     setArabicFont(f => f === 'system' ? 'pdms' : 'system'), []);
+
+  // Arabic font size: default 26, range 18–48
+  const ARABIC_SIZE_DEFAULT = 26;
+  const ARABIC_SIZE_MIN     = 18;
+  const ARABIC_SIZE_MAX     = 48;
+  const [arabicSize, setArabicSize] = useState(ARABIC_SIZE_DEFAULT);
+  const sizeDown = useCallback(() =>
+    setArabicSize(s => Math.max(ARABIC_SIZE_MIN, s - 2)), []);
+  const sizeUp   = useCallback(() =>
+    setArabicSize(s => Math.min(ARABIC_SIZE_MAX, s + 2)), []);
 
   const listRef = useRef(null);
 
@@ -304,38 +321,70 @@ export default function QuranScreen() {
 
       {/* Surah header */}
       <View style={styles.surahHeader}>
-        <TouchableOpacity style={styles.backBtn} onPress={goBack} hitSlop={{ top:8,bottom:8,left:8,right:8 }}>
-          <Text style={styles.backIcon}>‹</Text>
-          <Text style={styles.backText}>Surahs</Text>
-        </TouchableOpacity>
+        {/* Row 1: back · title · toggles */}
+        <View style={styles.surahHeaderRow}>
+          <TouchableOpacity style={styles.backBtn} onPress={goBack} hitSlop={{ top:8,bottom:8,left:8,right:8 }}>
+            <Text style={styles.backIcon}>‹</Text>
+            <Text style={styles.backText}>Surahs</Text>
+          </TouchableOpacity>
 
-        <View style={styles.surahTitleBlock}>
-          <Text style={styles.surahArabicTitle}>{selected?.name}</Text>
-          <Text style={styles.surahLatinTitle}>{selected?.englishName}</Text>
+          <View style={styles.surahTitleBlock}>
+            <Text style={styles.surahArabicTitle}>{selected?.name}</Text>
+            <Text style={styles.surahLatinTitle}>{selected?.englishName}</Text>
+          </View>
+
+          {/* Translation toggles + font switcher */}
+          <View style={styles.togglesRow}>
+            <TouchableOpacity
+              style={[styles.toggleBtn, showEn && styles.toggleBtnOn]}
+              onPress={() => setShowEn(v => !v)}
+            >
+              <Text style={[styles.toggleBtnText, showEn && styles.toggleBtnTextOn]}>EN</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.toggleBtn, showBn && styles.toggleBtnOn]}
+              onPress={() => setShowBn(v => !v)}
+            >
+              <Text style={[styles.toggleBtnText, showBn && styles.toggleBtnTextOn]}>বাংলা</Text>
+            </TouchableOpacity>
+            {/* Font switcher */}
+            <TouchableOpacity
+              style={[styles.toggleBtn, arabicFont === 'pdms' && styles.toggleBtnOn]}
+              onPress={toggleFont}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.toggleBtnText, arabicFont === 'pdms' && styles.toggleBtnTextOn]}>
+                خط
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Translation toggles + font switcher */}
-        <View style={styles.togglesRow}>
+        {/* Row 2: font-size control */}
+        <View style={styles.sizeRow}>
           <TouchableOpacity
-            style={[styles.toggleBtn, showEn && styles.toggleBtnOn]}
-            onPress={() => setShowEn(v => !v)}
+            style={[styles.sizeBtn, arabicSize <= ARABIC_SIZE_MIN && styles.sizeBtnDisabled]}
+            onPress={sizeDown}
+            disabled={arabicSize <= ARABIC_SIZE_MIN}
+            hitSlop={{ top:8, bottom:8, left:8, right:8 }}
           >
-            <Text style={[styles.toggleBtnText, showEn && styles.toggleBtnTextOn]}>EN</Text>
+            <Text style={[styles.sizeBtnText, arabicSize <= ARABIC_SIZE_MIN && styles.sizeBtnTextDisabled]}>
+              A−
+            </Text>
           </TouchableOpacity>
+
+          <Text style={styles.sizeLabel}>
+            Arabic size · {arabicSize}
+          </Text>
+
           <TouchableOpacity
-            style={[styles.toggleBtn, showBn && styles.toggleBtnOn]}
-            onPress={() => setShowBn(v => !v)}
+            style={[styles.sizeBtn, arabicSize >= ARABIC_SIZE_MAX && styles.sizeBtnDisabled]}
+            onPress={sizeUp}
+            disabled={arabicSize >= ARABIC_SIZE_MAX}
+            hitSlop={{ top:8, bottom:8, left:8, right:8 }}
           >
-            <Text style={[styles.toggleBtnText, showBn && styles.toggleBtnTextOn]}>বাংলা</Text>
-          </TouchableOpacity>
-          {/* Font switcher */}
-          <TouchableOpacity
-            style={[styles.toggleBtn, arabicFont === 'pdms' && styles.toggleBtnOn]}
-            onPress={toggleFont}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.toggleBtnText, arabicFont === 'pdms' && styles.toggleBtnTextOn]}>
-              خط
+            <Text style={[styles.sizeBtnText, arabicSize >= ARABIC_SIZE_MAX && styles.sizeBtnTextDisabled]}>
+              A+
             </Text>
           </TouchableOpacity>
         </View>
@@ -376,6 +425,7 @@ export default function QuranScreen() {
               showEn={showEn}
               showBn={showBn}
               arabicFont={arabicFont}
+              arabicSize={arabicSize}
               Colors={Colors}
             />
           )}
@@ -402,7 +452,8 @@ export default function QuranScreen() {
                   <Text style={[
                     styles.bismillah,
                     { color: Colors.primary },
-                    arabicFont === 'pdms' && { fontFamily: 'PDMSSaleem', fontSize: 28 },
+                    { fontSize: arabicSize + 2, lineHeight: (arabicSize + 2) * 1.7 },
+                    arabicFont === 'pdms' && { fontFamily: 'PDMSSaleem' },
                   ]}>
                     {BISMILLAH}
                   </Text>
@@ -530,13 +581,54 @@ const getStyles = (Colors) => StyleSheet.create({
 
   // Surah header
   surahHeader: {
-    flexDirection:     'row',
-    alignItems:        'center',
     paddingHorizontal: 16,
-    paddingVertical:   12,
+    paddingVertical:   10,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-    gap:               10,
+    gap:               8,
+  },
+  surahHeaderRow: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           10,
+  },
+
+  // Font-size control row
+  sizeRow: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'center',
+    gap:            12,
+    paddingTop:     2,
+  },
+  sizeBtn: {
+    paddingHorizontal: 14,
+    paddingVertical:   5,
+    borderRadius:      10,
+    borderWidth:       1,
+    borderColor:       Colors.primary + '80',
+    backgroundColor:   Colors.primary + '15',
+  },
+  sizeBtnDisabled: {
+    borderColor:     Colors.border,
+    backgroundColor: Colors.card,
+  },
+  sizeBtnText: {
+    fontSize:   13,
+    fontWeight: '700',
+    color:      Colors.primary,
+    letterSpacing: 0.3,
+  },
+  sizeBtnTextDisabled: {
+    color: Colors.textMuted,
+  },
+  sizeLabel: {
+    fontSize:   11,
+    color:      Colors.textSecondary,
+    fontWeight: '500',
+    letterSpacing: 0.3,
+    minWidth:   100,
+    textAlign:  'center',
   },
   backBtn: {
     flexDirection: 'row',
