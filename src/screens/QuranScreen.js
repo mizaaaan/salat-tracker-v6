@@ -87,8 +87,9 @@ const SurahRow = React.memo(({ item, onPress, Colors }) => {
 });
 
 // ── Ayah Item ──────────────────────────────────────────────────────────────────
-const AyahItem = React.memo(({ ayah, showEn, showBn, Colors }) => {
+const AyahItem = React.memo(({ ayah, showEn, showBn, arabicFont, Colors }) => {
   const styles = ayahStyles(Colors);
+  const fontFamily = arabicFont === 'pdms' ? 'PDMSSaleem' : undefined;
   return (
     <View style={styles.ayahCard}>
       {/* Verse number */}
@@ -100,7 +101,7 @@ const AyahItem = React.memo(({ ayah, showEn, showBn, Colors }) => {
       </View>
 
       {/* Arabic */}
-      <Text style={styles.arabicText} selectable>
+      <Text style={[styles.arabicText, fontFamily && { fontFamily }]} selectable>
         {ayah.arabic}
       </Text>
 
@@ -136,6 +137,10 @@ export default function QuranScreen() {
   const [search,     setSearch]     = useState('');
   const [showEn,     setShowEn]     = useState(true);
   const [showBn,     setShowBn]     = useState(true);
+  // 'system' = OS default Arabic, 'pdms' = PDMS Saleem Quran Font
+  const [arabicFont, setArabicFont] = useState('system');
+  const toggleFont = useCallback(() =>
+    setArabicFont(f => f === 'system' ? 'pdms' : 'system'), []);
 
   const listRef = useRef(null);
 
@@ -223,6 +228,16 @@ export default function QuranScreen() {
         <View style={styles.header}>
           <Text style={styles.headerTitle}>القرآن الكريم</Text>
           <Text style={styles.headerSub}>The Holy Quran</Text>
+          {/* Font switcher — accessible from list view too */}
+          <TouchableOpacity
+            style={[styles.fontToggleBtn, arabicFont === 'pdms' && styles.fontToggleBtnOn]}
+            onPress={toggleFont}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.fontToggleBtnText, arabicFont === 'pdms' && styles.fontToggleBtnTextOn]}>
+              {arabicFont === 'pdms' ? '✦ PDMS Font' : '✦ System Font'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Search */}
@@ -299,7 +314,7 @@ export default function QuranScreen() {
           <Text style={styles.surahLatinTitle}>{selected?.englishName}</Text>
         </View>
 
-        {/* Translation toggles */}
+        {/* Translation toggles + font switcher */}
         <View style={styles.togglesRow}>
           <TouchableOpacity
             style={[styles.toggleBtn, showEn && styles.toggleBtnOn]}
@@ -312,6 +327,16 @@ export default function QuranScreen() {
             onPress={() => setShowBn(v => !v)}
           >
             <Text style={[styles.toggleBtnText, showBn && styles.toggleBtnTextOn]}>বাংলা</Text>
+          </TouchableOpacity>
+          {/* Font switcher */}
+          <TouchableOpacity
+            style={[styles.toggleBtn, arabicFont === 'pdms' && styles.toggleBtnOn]}
+            onPress={toggleFont}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.toggleBtnText, arabicFont === 'pdms' && styles.toggleBtnTextOn]}>
+              خط
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -350,6 +375,7 @@ export default function QuranScreen() {
               ayah={item}
               showEn={showEn}
               showBn={showBn}
+              arabicFont={arabicFont}
               Colors={Colors}
             />
           )}
@@ -373,7 +399,11 @@ export default function QuranScreen() {
               {/* Bismillah */}
               {!NO_BISMILLAH.has(selected?.number) && (
                 <View style={styles.bismillahWrap}>
-                  <Text style={[styles.bismillah, { color: Colors.primary }]}>
+                  <Text style={[
+                    styles.bismillah,
+                    { color: Colors.primary },
+                    arabicFont === 'pdms' && { fontFamily: 'PDMSSaleem', fontSize: 28 },
+                  ]}>
                     {BISMILLAH}
                   </Text>
                 </View>
@@ -396,6 +426,30 @@ const getStyles = (Colors) => StyleSheet.create({
   container: {
     flex:            1,
     backgroundColor: Colors.background,
+  },
+
+  // Font toggle (list-view header)
+  fontToggleBtn: {
+    marginTop:         8,
+    paddingHorizontal: 14,
+    paddingVertical:   5,
+    borderRadius:      20,
+    borderWidth:       1,
+    borderColor:       Colors.border,
+    backgroundColor:   Colors.card,
+  },
+  fontToggleBtnOn: {
+    borderColor:     Colors.primary,
+    backgroundColor: Colors.primary + '22',
+  },
+  fontToggleBtnText: {
+    fontSize:   11,
+    fontWeight: '600',
+    color:      Colors.textSecondary,
+    letterSpacing: 0.4,
+  },
+  fontToggleBtnTextOn: {
+    color: Colors.primary,
   },
 
   // Header
