@@ -42,6 +42,15 @@ const stripBismillah = (text) => {
   return words.length > 4 ? words.slice(4).join(' ') : t;
 };
 
+// ── Font options ───────────────────────────────────────────────────────────────
+const FONT_OPTIONS = [
+  { key: 'system',   label: 'System',  fontFamily: undefined },
+  { key: 'amiri',    label: 'Amiri',   fontFamily: 'AmiriQuran' },
+  { key: 'volt',     label: 'Volt',    fontFamily: 'MeQuranVolt' },
+  { key: 'qpchafs',  label: 'QPC Hafs',fontFamily: 'QPCHafs' },
+  { key: 'hafsv22',  label: 'Hafs V22',fontFamily: 'UthmanicHafsV22' },
+];
+
 // ── API ────────────────────────────────────────────────────────────────────────
 const BASE = 'https://api.alquran.cloud/v1';
 
@@ -89,7 +98,7 @@ const SurahRow = React.memo(({ item, onPress, Colors }) => {
 // ── Ayah Item ──────────────────────────────────────────────────────────────────
 const AyahItem = React.memo(({ ayah, showEn, showBn, arabicFont, arabicSize, Colors }) => {
   const styles = ayahStyles(Colors);
-  const fontFamily = arabicFont === 'pdms' ? 'PDMSSaleem' : undefined;
+  const fontFamily = FONT_OPTIONS.find(f => f.key === arabicFont)?.fontFamily;
   return (
     <View style={styles.ayahCard}>
       {/* Verse number */}
@@ -144,10 +153,14 @@ export default function QuranScreen() {
   const [search,     setSearch]     = useState('');
   const [showEn,     setShowEn]     = useState(true);
   const [showBn,     setShowBn]     = useState(true);
-  // 'system' = OS default Arabic, 'pdms' = PDMS Saleem Quran Font
+  // cycles through FONT_OPTIONS: system, amiri, volt, qpchafs, hafsv22
   const [arabicFont, setArabicFont] = useState('system');
   const toggleFont = useCallback(() =>
-    setArabicFont(f => f === 'system' ? 'pdms' : 'system'), []);
+    setArabicFont(f => {
+      const idx = FONT_OPTIONS.findIndex(o => o.key === f);
+      return FONT_OPTIONS[(idx + 1) % FONT_OPTIONS.length].key;
+    }), []);
+  const currentFontLabel = FONT_OPTIONS.find(o => o.key === arabicFont)?.label ?? 'System';
 
   // Arabic font size: default 26, range 18–48
   const ARABIC_SIZE_DEFAULT = 26;
@@ -247,12 +260,12 @@ export default function QuranScreen() {
           <Text style={styles.headerSub}>The Holy Quran</Text>
           {/* Font switcher — accessible from list view too */}
           <TouchableOpacity
-            style={[styles.fontToggleBtn, arabicFont === 'pdms' && styles.fontToggleBtnOn]}
+            style={[styles.fontToggleBtn, arabicFont !== 'system' && styles.fontToggleBtnOn]}
             onPress={toggleFont}
             activeOpacity={0.7}
           >
-            <Text style={[styles.fontToggleBtnText, arabicFont === 'pdms' && styles.fontToggleBtnTextOn]}>
-              {arabicFont === 'pdms' ? '✦ PDMS Font' : '✦ System Font'}
+            <Text style={[styles.fontToggleBtnText, arabicFont !== 'system' && styles.fontToggleBtnTextOn]}>
+              ✦ Font: {currentFontLabel}
             </Text>
           </TouchableOpacity>
         </View>
@@ -328,9 +341,32 @@ export default function QuranScreen() {
             <Text style={styles.backText}>Surahs</Text>
           </TouchableOpacity>
 
-          <View style={styles.surahTitleBlock}>
-            <Text style={styles.surahArabicTitle}>{selected?.name}</Text>
-            <Text style={styles.surahLatinTitle}>{selected?.englishName}</Text>
+          <View style={styles.sizeRow}>
+            <TouchableOpacity
+              style={[styles.sizeBtn, arabicSize <= ARABIC_SIZE_MIN && styles.sizeBtnDisabled]}
+              onPress={sizeDown}
+              disabled={arabicSize <= ARABIC_SIZE_MIN}
+              hitSlop={{ top:8, bottom:8, left:8, right:8 }}
+            >
+              <Text style={[styles.sizeBtnText, arabicSize <= ARABIC_SIZE_MIN && styles.sizeBtnTextDisabled]}>
+                A−
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={styles.sizeLabel}>
+              {arabicSize}
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.sizeBtn, arabicSize >= ARABIC_SIZE_MAX && styles.sizeBtnDisabled]}
+              onPress={sizeUp}
+              disabled={arabicSize >= ARABIC_SIZE_MAX}
+              hitSlop={{ top:8, bottom:8, left:8, right:8 }}
+            >
+              <Text style={[styles.sizeBtnText, arabicSize >= ARABIC_SIZE_MAX && styles.sizeBtnTextDisabled]}>
+                A+
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {/* Translation toggles + font switcher */}
@@ -349,44 +385,21 @@ export default function QuranScreen() {
             </TouchableOpacity>
             {/* Font switcher */}
             <TouchableOpacity
-              style={[styles.toggleBtn, arabicFont === 'pdms' && styles.toggleBtnOn]}
+              style={[styles.toggleBtn, arabicFont !== 'system' && styles.toggleBtnOn]}
               onPress={toggleFont}
               activeOpacity={0.7}
             >
-              <Text style={[styles.toggleBtnText, arabicFont === 'pdms' && styles.toggleBtnTextOn]}>
+              <Text style={[styles.toggleBtnText, arabicFont !== 'system' && styles.toggleBtnTextOn]}>
                 خط
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Row 2: font-size control */}
-        <View style={styles.sizeRow}>
-          <TouchableOpacity
-            style={[styles.sizeBtn, arabicSize <= ARABIC_SIZE_MIN && styles.sizeBtnDisabled]}
-            onPress={sizeDown}
-            disabled={arabicSize <= ARABIC_SIZE_MIN}
-            hitSlop={{ top:8, bottom:8, left:8, right:8 }}
-          >
-            <Text style={[styles.sizeBtnText, arabicSize <= ARABIC_SIZE_MIN && styles.sizeBtnTextDisabled]}>
-              A−
-            </Text>
-          </TouchableOpacity>
-
-          <Text style={styles.sizeLabel}>
-            Arabic size · {arabicSize}
-          </Text>
-
-          <TouchableOpacity
-            style={[styles.sizeBtn, arabicSize >= ARABIC_SIZE_MAX && styles.sizeBtnDisabled]}
-            onPress={sizeUp}
-            disabled={arabicSize >= ARABIC_SIZE_MAX}
-            hitSlop={{ top:8, bottom:8, left:8, right:8 }}
-          >
-            <Text style={[styles.sizeBtnText, arabicSize >= ARABIC_SIZE_MAX && styles.sizeBtnTextDisabled]}>
-              A+
-            </Text>
-          </TouchableOpacity>
+        {/* Row 2: surah title */}
+        <View style={styles.surahTitleBlock}>
+          <Text style={styles.surahArabicTitle}>{selected?.name}</Text>
+          <Text style={styles.surahLatinTitle}>{selected?.englishName}</Text>
         </View>
       </View>
 
@@ -453,7 +466,9 @@ export default function QuranScreen() {
                     styles.bismillah,
                     { color: Colors.primary },
                     { fontSize: arabicSize + 2, lineHeight: (arabicSize + 2) * 1.7 },
-                    arabicFont === 'pdms' && { fontFamily: 'PDMSSaleem' },
+                    FONT_OPTIONS.find(o => o.key === arabicFont)?.fontFamily
+                      ? { fontFamily: FONT_OPTIONS.find(o => o.key === arabicFont).fontFamily }
+                      : null,
                   ]}>
                     {BISMILLAH}
                   </Text>
@@ -595,10 +610,11 @@ const getStyles = (Colors) => StyleSheet.create({
 
   // Font-size control row
   sizeRow: {
+    flex:           1,
     flexDirection:  'row',
     alignItems:     'center',
     justifyContent: 'center',
-    gap:            12,
+    gap:            8,
     paddingTop:     2,
   },
   sizeBtn: {
@@ -627,7 +643,7 @@ const getStyles = (Colors) => StyleSheet.create({
     color:      Colors.textSecondary,
     fontWeight: '500',
     letterSpacing: 0.3,
-    minWidth:   100,
+    minWidth:   22,
     textAlign:  'center',
   },
   backBtn: {
@@ -647,8 +663,8 @@ const getStyles = (Colors) => StyleSheet.create({
     fontWeight: '600',
   },
   surahTitleBlock: {
-    flex:      1,
     alignItems:'center',
+    paddingTop: 6,
   },
   surahArabicTitle: {
     fontSize:   20,
@@ -801,6 +817,7 @@ const ayahStyles = (Colors) => StyleSheet.create({
     paddingBottom:     16,
     borderBottomWidth: 1,
     borderBottomColor: Colors.divider,
+    overflow:          'hidden',  // safety net — prevents text bleeding past card edge
   },
   verseNumWrap: {
     flexDirection: 'row',
@@ -831,25 +848,29 @@ const ayahStyles = (Colors) => StyleSheet.create({
 
   // Arabic — large, right-to-left
   arabicText: {
-    color:         Colors.text,
-    fontSize:      26,
-    lineHeight:    46,
-    textAlign:     'right',
+    color:            Colors.text,
+    fontSize:         26,
+    lineHeight:       46,
+    textAlign:        'right',
     writingDirection: 'rtl',
-    fontWeight:    '500',
-    letterSpacing: 0.5,
-    marginBottom:  14,
-    paddingHorizontal: 4,
+    fontWeight:       '500',
+    // NOTE: letterSpacing removed — causes RTL Arabic text to overflow the
+    // right edge of the screen at larger font sizes (spacing is added after
+    // each glyph, pushing the line-start char off-screen in RTL).
+    marginBottom:     14,
+    // NOTE: paddingHorizontal removed — parent ayahCard already has 16px
+    // horizontal padding; adding more here shrinks the wrapping budget and
+    // contributes to overflow.
+    alignSelf:        'stretch',   // fill the full card width
   },
 
   // English
   englishText: {
-    color:      Colors.textSecondary,
-    fontSize:   14,
-    lineHeight: 22,
-    fontStyle:  'italic',
+    color:        Colors.textSecondary,
+    fontSize:     14,
+    lineHeight:   22,
+    fontStyle:    'italic',
     marginBottom: 8,
-    paddingHorizontal: 4,
   },
 
   // Bangla
@@ -858,6 +879,5 @@ const ayahStyles = (Colors) => StyleSheet.create({
     fontSize:   14,
     lineHeight: 24,
     fontWeight: '400',
-    paddingHorizontal: 4,
   },
 });
