@@ -82,12 +82,23 @@ function DuaDetailView({ category, dua, styles, onBack }) {
           <>
             {content.parts.map((part, idx) => (
               <View key={idx} style={styles.duaPartCard}>
-                <Text style={styles.duaArabic}>{part.arabic}</Text>
+                {!!part.intro && (
+                  <Text style={styles.duaIntro}>{part.intro}</Text>
+                )}
+                {!!part.arabic && (
+                  <Text style={styles.duaArabic}>{part.arabic}</Text>
+                )}
                 {!!part.transliteration && (
                   <Text style={styles.duaTransliteration}>{part.transliteration}</Text>
                 )}
                 {!!part.bn && (
                   <Text style={styles.duaTranslation}>{part.bn}</Text>
+                )}
+                {!!part.note && (
+                  <Text style={styles.duaNote}>{part.note}</Text>
+                )}
+                {!!part.reference && (
+                  <Text style={styles.duaInlineReference}>{part.reference}</Text>
                 )}
                 {!!part.footnote && (
                   <Text style={styles.duaFootnoteMark}>[{part.footnote}]</Text>
@@ -410,6 +421,28 @@ const getStyles = (Colors) => StyleSheet.create({
     color:      Colors.text,
     writingDirection: 'rtl',
     marginBottom: 12,
+  },
+  duaIntro: {
+    fontSize:   12.5,
+    lineHeight: 20,
+    color:      Colors.textSecondary,
+    fontStyle:  'italic',
+    marginBottom: 10,
+  },
+  duaNote: {
+    fontSize:   12,
+    lineHeight: 19,
+    color:      Colors.textSecondary,
+    marginTop:  10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  duaInlineReference: {
+    fontSize:   11,
+    lineHeight: 17,
+    color:      Colors.primary,
+    marginTop:  8,
   },
   duaTransliteration: {
     fontSize:   13.5,
