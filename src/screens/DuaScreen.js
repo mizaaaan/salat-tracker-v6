@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../constants/ThemeContext';
 import { CATEGORY_DUAS } from '../constants/duaData';
+import { DUA_CONTENT } from '../constants/duaContent';
 
 // ── 18 Dua categories — 3 per row, 6 rows ─────────────────────────────────────
 // duas: populated from duaData.js; arabic/translation fields will be added later.
@@ -48,8 +49,73 @@ function DuaTile({ item, styles, onPress }) {
   );
 }
 
+// ── Individual dua detail (Arabic / transliteration / translation) ─────────────
+function DuaDetailView({ category, dua, styles, onBack }) {
+  const content = DUA_CONTENT[category.key]?.[dua.id];
+
+  return (
+    <View style={styles.detailContainer}>
+
+      {/* ── Detail header ── */}
+      <View style={styles.detailHeader}>
+        <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.7}>
+          <Text style={styles.backArrow}>←</Text>
+        </TouchableOpacity>
+        <View style={styles.detailHeaderCenter}>
+          <Text style={styles.detailHeaderBn} numberOfLines={2}>{dua.bn}</Text>
+          <Text style={styles.detailHeaderEn}>{category.bn}</Text>
+        </View>
+        <View style={styles.backBtn} />
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.duaDetailScroll}
+        showsVerticalScrollIndicator={false}
+      >
+        {!content ? (
+          <View style={styles.emptyWrap}>
+            <Text style={styles.emptyIcon}>📿</Text>
+            <Text style={styles.emptyTitle}>শীঘ্রই আসছে</Text>
+            <Text style={styles.emptySubtitle}>Coming Soon</Text>
+          </View>
+        ) : (
+          <>
+            {content.parts.map((part, idx) => (
+              <View key={idx} style={styles.duaPartCard}>
+                <Text style={styles.duaArabic}>{part.arabic}</Text>
+                {!!part.transliteration && (
+                  <Text style={styles.duaTransliteration}>{part.transliteration}</Text>
+                )}
+                {!!part.bn && (
+                  <Text style={styles.duaTranslation}>{part.bn}</Text>
+                )}
+                {!!part.footnote && (
+                  <Text style={styles.duaFootnoteMark}>[{part.footnote}]</Text>
+                )}
+                {idx < content.parts.length - 1 && <View style={styles.duaPartDivider} />}
+              </View>
+            ))}
+
+            {!!content.footnotes?.length && (
+              <View style={styles.duaReferenceBox}>
+                <Text style={styles.duaReferenceTitle}>তথ্যসূত্র</Text>
+                {content.footnotes.map((note, idx) => (
+                  <Text key={idx} style={styles.duaReferenceText}>
+                    [{idx + 1}] {note}
+                  </Text>
+                ))}
+              </View>
+            )}
+          </>
+        )}
+        <View style={{ height: 32 }} />
+      </ScrollView>
+    </View>
+  );
+}
+
 // ── Category detail list ───────────────────────────────────────────────────────
-function CategoryDetailView({ category, styles, onBack }) {
+function CategoryDetailView({ category, styles, onBack, onSelectDua }) {
   const duas = category.duas;
   return (
     <View style={styles.detailContainer}>
@@ -94,7 +160,7 @@ function CategoryDetailView({ category, styles, onBack }) {
               <TouchableOpacity
                 style={styles.duaRow}
                 activeOpacity={0.65}
-                onPress={() => {/* dua detail — text will be added later */}}
+                onPress={() => onSelectDua(dua)}
               >
                 <View style={styles.duaNumBadge}>
                   <Text style={styles.duaNumText}>{dua.id}</Text>
@@ -118,11 +184,16 @@ export default function DuaScreen() {
   const styles = getStyles(Colors);
 
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedDua, setSelectedDua] = useState(null);
 
-  // Android hardware back button — go back to grid when in category view
+  // Android hardware back button — step back one level at a time
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
+        if (selectedDua) {
+          setSelectedDua(null);
+          return true; // handled
+        }
         if (selectedCategory) {
           setSelectedCategory(null);
           return true; // handled
@@ -131,8 +202,22 @@ export default function DuaScreen() {
       };
       BackHandler.addEventListener('hardwareBackPress', onBackPress);
       return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
-    }, [selectedCategory])
+    }, [selectedCategory, selectedDua])
   );
+
+  // ── Individual dua detail view ──
+  if (selectedCategory && selectedDua) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <DuaDetailView
+          category={selectedCategory}
+          dua={selectedDua}
+          styles={styles}
+          onBack={() => setSelectedDua(null)}
+        />
+      </SafeAreaView>
+    );
+  }
 
   // ── Category detail view ──
   if (selectedCategory) {
@@ -142,6 +227,7 @@ export default function DuaScreen() {
           category={selectedCategory}
           styles={styles}
           onBack={() => setSelectedCategory(null)}
+          onSelectDua={setSelectedDua}
         />
       </SafeAreaView>
     );
@@ -304,6 +390,64 @@ const getStyles = (Colors) => StyleSheet.create({
 
   // ── Dua list ──
   detailList: { paddingHorizontal: 16, paddingTop: 4 },
+
+  // ── Individual dua detail ──
+  duaDetailScroll: { paddingHorizontal: 16, paddingTop: 16 },
+  duaPartCard: {
+    backgroundColor:  Colors.card,
+    borderRadius:     16,
+    borderWidth:      1,
+    borderColor:      Colors.border,
+    paddingVertical:  18,
+    paddingHorizontal: 16,
+    marginBottom:     14,
+  },
+  duaArabic: {
+    fontFamily: 'UthmanicHafsV22',
+    fontSize:   24,
+    lineHeight: 46,
+    textAlign:  'right',
+    color:      Colors.text,
+    writingDirection: 'rtl',
+    marginBottom: 12,
+  },
+  duaTransliteration: {
+    fontSize:   13.5,
+    lineHeight: 22,
+    color:      Colors.primary,
+    fontStyle:  'italic',
+    marginBottom: 8,
+  },
+  duaTranslation: {
+    fontSize:   14,
+    lineHeight: 22,
+    color:      Colors.textSecondary,
+  },
+  duaFootnoteMark: {
+    alignSelf:  'flex-end',
+    fontSize:   11,
+    color:      Colors.primary,
+    marginTop:  6,
+  },
+  duaPartDivider: { height: 0 },
+  duaReferenceBox: {
+    marginTop: 6,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  duaReferenceTitle: {
+    fontSize:   12,
+    fontWeight: '700',
+    color:      Colors.text,
+    marginBottom: 6,
+  },
+  duaReferenceText: {
+    fontSize:   11.5,
+    lineHeight: 18,
+    color:      Colors.textSecondary,
+    marginBottom: 6,
+  },
 
   duaRow: {
     flexDirection:  'row',
