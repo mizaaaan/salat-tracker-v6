@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Image, Platform, useWindowDimensions } from 'react-native';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -13,6 +13,9 @@ import ToolsScreen   from './src/screens/ToolsScreen';
 import QuranScreen   from './src/screens/QuranScreen';
 import DuaScreen     from './src/screens/DuaScreen';
 import { ThemeProvider, useTheme } from './src/constants/ThemeContext';
+// Registers the background task (must be imported at module scope so the
+// native background runtime can find TaskManager.defineTask below).
+import { registerPrayerBackgroundTask } from './src/utils/backgroundTasks';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -64,7 +67,7 @@ function Navigation() {
             shadowOpacity:   0.06,
             shadowRadius:    6,
             elevation:       8,
-            // Removed position:'absolute' â it caused the tab bar to float
+            // Removed position:'absolute' Ã¢ÂÂ it caused the tab bar to float
             // over screen content. React Navigation could not reserve space
             // for it, so the last ~88px of every scroll screen was hidden
             // behind the tab bar (icons still visible, text cut off).
@@ -104,7 +107,11 @@ export default function App() {
     'UthmanicHafsV22': require('./assets/fonts/UthmanicHafs_V22.ttf'),
   });
 
-  // Render nothing until the custom font is ready â avoids a flash of
+  useEffect(() => {
+    registerPrayerBackgroundTask();
+  }, []);
+
+  // Render nothing until the custom font is ready — avoids a flash of
   // unstyled text on the very first frame.
   if (!fontsLoaded) return null;
 
